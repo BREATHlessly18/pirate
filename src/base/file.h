@@ -1,10 +1,6 @@
 #ifndef PIRATE_BASE_FILE_H_
 #define PIRATE_BASE_FILE_H_
 
-// #include "standard/standard.hpp"
-// #include "utils/buffer.h"
-// #include "utils/copyability.h"
-
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,23 +14,23 @@ namespace pirate {
 namespace base {
 
 class File {
- public:
+public:
   enum class Mode {
-    ro,         // 只读, 文件必须存在, 原内容保留
-    rw_update,  // 读写, 文件必须存在, 原内容保留
-    rw_create,  // 读写, 无文件则创建, 目标文件内容制空
-    wo,         // 只写, 无文件则创建, 目标文件内容制空
-    append,  // 只写, 无文件则创建, 目标文件末尾追加，无法seek
-    no_rw    // 支持不进行读写操作访问文件
+    ro,        // 只读, 文件必须存在, 原内容保留
+    rw_update, // 读写, 文件必须存在, 原内容保留
+    rw_create, // 读写, 无文件则创建, 目标文件内容制空
+    wo,        // 只写, 无文件则创建, 目标文件内容制空
+    append, // 只写, 无文件则创建, 目标文件末尾追加，无法seek
+    no_rw   // 支持不进行读写操作访问文件
   };
 
   enum class Positon {
-    begin,    // 从头开始
-    current,  // 当前开始
-    end,      // 尾部开始
+    begin,   // 从头开始
+    current, // 当前开始
+    end,     // 尾部开始
   };
 
- public:
+public:
   File();
   File(std::string const &f_name, Mode mod);
   File(std::string const &f_name, Mode mod, Positon whence, uint64_t offset);
@@ -62,10 +58,10 @@ class File {
   bool exist() const;
   Mode mode() const;
 
- private:
+private:
   static std::string str_mode(Mode const mod);
 
- private:
+private:
   FILE *stream_;
   Mode mode_;
   std::string file_name_;
@@ -73,7 +69,7 @@ class File {
   std::atomic<off_t> read_bytes_;
 };
 
-}  // namespace base
-}  // namespace pirate
+} // namespace base
+} // namespace pirate
 
 #endif
