@@ -1,33 +1,50 @@
-// #include <zlib.h>
-
 #include <fmt/core.h>
-#include <minizip/unzip.h>
-#include <unistd.h>
 
-#include <cstdlib>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
-#include "pirate/unz_handle.h"
-#include "pirate/unz_pirate.h"
+#include "pirate/zip_archive.h"
 
-void traverse_file(const char *zip_file) {
-  pirate::unz_pirate uz(zip_file);
-  fmt::print("zip_file:{}\n", zip_file);
-  if (not uz) {
-    fmt::print("unz_pirate init failed\n");
-    exit(0);
+int main(int argc, char** argv) {
+  if (argc < 2) {
+    fmt::println("usage: {} <zip|tar|tar.gz>", argv[0]);
+    return 1;
   }
 
-  for (auto entry : uz.compress_file()) {
-    sleep(1);
-    unz_file_info64 file_info{};
-    std::string uncompress_file_path(128, '\0');
-    entry.get_current_file_info(file_info, uncompress_file_path);
-    fmt::print("file:{}\n", std::string(uncompress_file_path));
-    // pirate::unz_pirate_handle_extract(entry);
-  }
-}
+  const char* zip_file = argv[1];
+  try {
+    pirate::zip_archive archive(zip_file);
+    if (!archive) {
+      fmt::println("open failed: {}", zip_file);
+      return 1;
+    }
 
-int main() {
-  traverse_file("./xxx.zip");
+    fmt::println("zip_file:{}", zip_file);
+
+    std::vector<pirate::archive_entry> selected;
+    for (const auto& entry : archive) {
+      fmt::println("file:{} size:{} idx:{} dir:{}", entry.path().string(),
+                   entry.file_size(), entry.index(), entry.is_directory());
+      if (entry.is_regular_file()) {
+        selected.push_back(entry);
+      }
+    }
+
+    fmt::println("selected:{}", selected.size());
+    for (const auto& entry : selected) {
+      fmt::println("  pick idx:{} {}", entry.index(), entry.path().string());
+    }
+
+    if (!selected.empty()) {
+      const int ret = archive.extract<pirate::sequential_extract_factory>(
+          selected, pirate::path{"out"});
+      fmt::println("extract:{}", ret);
+    }
+  } catch (const std::exception& e) {
+    fmt::println("error{}", e.what());
+    return 1;
+  }
+
   return 0;
 }

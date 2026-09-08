@@ -34,6 +34,10 @@
 
 
 # directory
-\build
+\build*
 \.cache
 \test
+\.vscode
+
+!test/
+!src
