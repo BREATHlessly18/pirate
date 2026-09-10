@@ -5,7 +5,7 @@
 
 #include <string>
 
-#include "pirate/zip_archive.h"
+#include "pirate/archive.h"
 
 namespace pirate {
 namespace {
@@ -23,8 +23,8 @@ bool looks_like_directory(const char* name, unsigned int file_type) {
 
 }  // namespace
 
-archive_iterator::archive_iterator(zip_archive* archive)
-    : archive_(archive), at_end_(archive == nullptr || !*archive) {
+archive_iterator::archive_iterator(archive* owner)
+    : archive_(owner), at_end_(owner == nullptr || !*owner) {
   if (!at_end_) {
     load_current();
   }

@@ -9,21 +9,19 @@
 
 namespace pirate {
 
-class zip_archive;
+class archive;
 
 // Policy factories (synchronous_factory / async_factory).
-// Chosen at compile time: archive.extract<parallel_extract_factory>(...)
+// Chosen at compile time: ar.extract<parallel_extract_factory>(...)
 
 struct sequential_extract_factory {
-  static int extract(zip_archive& archive,
-                     const std::vector<archive_entry>& entries,
+  static int extract(archive& ar, const std::vector<archive_entry>& entries,
                      const path& destination_root, extract_options opts);
 };
 
-// Same API; will open one zip_archive per worker later. Currently one pass.
+// Same API; will open one archive per worker later. Currently one pass.
 struct parallel_extract_factory {
-  static int extract(zip_archive& archive,
-                     const std::vector<archive_entry>& entries,
+  static int extract(archive& ar, const std::vector<archive_entry>& entries,
                      const path& destination_root, extract_options opts);
 };
 

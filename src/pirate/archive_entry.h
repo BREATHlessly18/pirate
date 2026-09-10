@@ -8,9 +8,9 @@
 namespace pirate {
 
 class archive_iterator;
-class zip_archive;
+class archive;
 
-// Value snapshot of one ZIP member (like std::filesystem::directory_entry).
+// Value snapshot of one archive member (like std::filesystem::directory_entry).
 // Identified by sequential index in the archive stream (libarchive).
 class archive_entry {
  public:
@@ -36,7 +36,7 @@ class archive_entry {
 
  private:
   friend class archive_iterator;
-  friend class zip_archive;
+  friend class archive;
 
   pirate::path path_{};
   std::uint64_t uncompressed_size_{0};

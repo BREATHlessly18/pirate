@@ -95,7 +95,7 @@ endif()
 find_package(ZLIB REQUIRED)
 
 # ---------------------------------------------------------------------------
-# libarchive (static). ZIP now; tar/gz/zst later.
+# libarchive (static). ZIP and tar/gz via one pirate::archive type.
 # BUILD_SHARED_LIBS is forced OFF only for this dependency.
 # ---------------------------------------------------------------------------
 set(_pirate_saved_bsl "${BUILD_SHARED_LIBS}")
@@ -153,7 +153,7 @@ endif()
 # Explicit sources (do not GLOB leftover experimental files).
 set(PIRATE_SOURCES
     src/pirate/archive_iterator.cc
-    src/pirate/zip_archive.cc
+    src/pirate/archive.cc
 )
 
 if(PIRATE_BUILD_SHARED)

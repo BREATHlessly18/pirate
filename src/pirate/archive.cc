@@ -1,4 +1,4 @@
-#include "pirate/zip_archive.h"
+#include "pirate/archive.h"
 
 #include <archive.h>
 #include <archive_entry.h>
@@ -40,7 +40,7 @@ fs::path destination_for(const path& root, const std::string& member_path,
   return dest;
 }
 
-int write_current_data(struct archive* reader, const fs::path& dest) {
+int write_current_data(::archive* reader, const fs::path& dest) {
   std::ofstream out(dest, std::ios::binary | std::ios::trunc);
   if (!out) {
     return -1;
@@ -59,17 +59,17 @@ int write_current_data(struct archive* reader, const fs::path& dest) {
 
 }  // namespace
 
-zip_archive::zip_archive(path zip_path) : zip_path_(std::move(zip_path)) {
-  for (unsigned char c : zip_path_.native()) {
+archive::archive(path source) : source_(std::move(source)) {
+  for (unsigned char c : source_.native()) {
     if (c > 127) {
-      throw std::runtime_error("non-ASCII zip path is not supported");
+      throw std::runtime_error("non-ASCII archive path is not supported");
     }
   }
   opened_ = open_for_read();
 }
 
-zip_archive::zip_archive(zip_archive&& other) noexcept
-    : zip_path_(std::move(other.zip_path_)),
+archive::archive(archive&& other) noexcept
+    : source_(std::move(other.source_)),
       reader_(other.reader_),
       next_index_(other.next_index_),
       opened_(other.opened_) {
@@ -78,10 +78,10 @@ zip_archive::zip_archive(zip_archive&& other) noexcept
   other.next_index_ = 0;
 }
 
-zip_archive& zip_archive::operator=(zip_archive&& other) noexcept {
+archive& archive::operator=(archive&& other) noexcept {
   if (this != &other) {
     close_reader();
-    zip_path_ = std::move(other.zip_path_);
+    source_ = std::move(other.source_);
     reader_ = other.reader_;
     next_index_ = other.next_index_;
     opened_ = other.opened_;
@@ -92,16 +92,16 @@ zip_archive& zip_archive::operator=(zip_archive&& other) noexcept {
   return *this;
 }
 
-zip_archive::~zip_archive() { close_reader(); }
+archive::~archive() { close_reader(); }
 
-void zip_archive::close_reader() {
+void archive::close_reader() {
   if (reader_) {
     archive_read_free(reader_);
     reader_ = nullptr;
   }
 }
 
-bool zip_archive::open_for_read() {
+bool archive::open_for_read() {
   close_reader();
   next_index_ = 0;
   reader_ = archive_read_new();
@@ -115,7 +115,7 @@ bool zip_archive::open_for_read() {
   archive_read_support_format_tar(reader_);
 
   const int ret =
-      archive_read_open_filename(reader_, zip_path_.native().data(), 10240);
+      archive_read_open_filename(reader_, source_.native().data(), 10240);
   if (ret != ARCHIVE_OK) {
     close_reader();
     opened_ = false;
@@ -125,16 +125,16 @@ bool zip_archive::open_for_read() {
   return true;
 }
 
-archive_iterator zip_archive::begin() {
+archive_iterator archive::begin() {
   if (!open_for_read()) {
     return archive_iterator{};
   }
   return archive_iterator{this};
 }
 
-int zip_archive::extract_matching(const std::vector<archive_entry>& entries,
-                                  const path& destination_root,
-                                  const extract_options& opts) {
+int archive::extract_matching(const std::vector<archive_entry>& entries,
+                              const path& destination_root,
+                              const extract_options& opts) {
   if (!open_for_read()) {
     return -1;
   }
@@ -190,20 +190,20 @@ int zip_archive::extract_matching(const std::vector<archive_entry>& entries,
   return (ret == ARCHIVE_EOF && wanted.empty()) ? 0 : -1;
 }
 
-int sequential_extract_factory::extract(zip_archive& archive,
+int sequential_extract_factory::extract(archive& ar,
                                         const std::vector<archive_entry>& entries,
                                         const path& destination_root,
                                         extract_options opts) {
   (void)opts.concurrency;
-  return archive.extract_matching(entries, destination_root, opts);
+  return ar.extract_matching(entries, destination_root, opts);
 }
 
-int parallel_extract_factory::extract(zip_archive& archive,
+int parallel_extract_factory::extract(archive& ar,
                                       const std::vector<archive_entry>& entries,
                                       const path& destination_root,
                                       extract_options opts) {
-  // One zip_archive / unz handle per worker later; partition by entry.index().
-  return sequential_extract_factory::extract(archive, entries, destination_root,
+  // One archive handle per worker later; partition by entry.index().
+  return sequential_extract_factory::extract(ar, entries, destination_root,
                                              opts);
 }
 

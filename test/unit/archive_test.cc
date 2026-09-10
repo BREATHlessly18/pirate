@@ -9,7 +9,7 @@
 #include "make_archive.h"
 #include "pirate/archive_iterator.h"
 #include "pirate/extract_factory.h"
-#include "pirate/zip_archive.h"
+#include "pirate/archive.h"
 
 namespace fs = std::filesystem;
 
@@ -26,12 +26,12 @@ class ArchiveTest : public ::testing::Test {
 };
 
 TEST_F(ArchiveTest, RejectsNonAsciiPath) {
-  EXPECT_THROW(pirate::zip_archive("C:/tmp/\xE4\xB8\xAD.zip"),
+  EXPECT_THROW(pirate::archive("C:/tmp/\xE4\xB8\xAD.zip"),
                std::runtime_error);
 }
 
 TEST_F(ArchiveTest, OpenMissingFile) {
-  pirate::zip_archive archive((root_ / "missing.zip").string());
+  pirate::archive archive((root_ / "missing.zip").string());
   EXPECT_FALSE(static_cast<bool>(archive));
   auto it = archive.begin();
   EXPECT_TRUE(it.at_end());
@@ -41,7 +41,7 @@ TEST_F(ArchiveTest, OpenMissingFile) {
 TEST_F(ArchiveTest, EmptyZipListAndExtract) {
   const auto zip = root_ / "empty.zip";
   pirate_test::write_bytes(zip, pirate_test::make_store_zip({}));
-  pirate::zip_archive archive(zip.string());
+  pirate::archive archive(zip.string());
   ASSERT_TRUE(archive);
   EXPECT_EQ(archive.location().string(), zip.string());
   int n = 0;
@@ -65,7 +65,7 @@ TEST_F(ArchiveTest, ZipListExtractAndFactories) {
                {"backslash\\", "", true},
            }));
 
-  pirate::zip_archive archive(zip.string());
+  pirate::archive archive(zip.string());
   ASSERT_TRUE(archive);
 
   std::vector<pirate::archive_entry> all;
@@ -121,7 +121,7 @@ TEST_F(ArchiveTest, ZipSlipRejected) {
   const auto zip = root_ / "slip.zip";
   pirate_test::write_bytes(
       zip, pirate_test::make_store_zip({{"../evil.txt", "nope", false}}));
-  pirate::zip_archive archive(zip.string());
+  pirate::archive archive(zip.string());
   ASSERT_TRUE(archive);
   std::vector<pirate::archive_entry> files;
   for (const auto& e : archive) {
@@ -139,7 +139,7 @@ TEST_F(ArchiveTest, ExtractSubsetAndNoCreateDirs) {
   pirate_test::write_bytes(
       zip, pirate_test::make_store_zip(
                {{"keep.txt", "k", false}, {"skip.txt", "s", false}}));
-  pirate::zip_archive archive(zip.string());
+  pirate::archive archive(zip.string());
   ASSERT_TRUE(archive);
   std::vector<pirate::archive_entry> files;
   for (const auto& e : archive) {
@@ -157,7 +157,7 @@ TEST_F(ArchiveTest, ExtractSubsetAndNoCreateDirs) {
   opts.create_directories = false;
   pirate_test::write_bytes(
       zip, pirate_test::make_store_zip({{"nested/x.txt", "n", false}}));
-  pirate::zip_archive nested(zip.string());
+  pirate::archive nested(zip.string());
   std::vector<pirate::archive_entry> nested_files;
   for (const auto& e : nested) {
     nested_files.push_back(e);
@@ -171,14 +171,14 @@ TEST_F(ArchiveTest, WantedIndexMissing) {
   const auto zip = root_ / "one.zip";
   pirate_test::write_bytes(zip,
                            pirate_test::make_store_zip({{"a.txt", "a", false}}));
-  pirate::zip_archive archive(zip.string());
+  pirate::archive archive(zip.string());
   ASSERT_TRUE(archive);
   auto fake = pirate::archive_entry::with_index(99, pirate::path{"a.txt"});
   EXPECT_EQ(archive.extract(fake, pirate::path{(root_ / "d").string()}), -1);
 }
 
 TEST_F(ArchiveTest, ExtractUnopenedAndCreateDirFails) {
-  pirate::zip_archive missing((root_ / "nope.zip").string());
+  pirate::archive missing((root_ / "nope.zip").string());
   EXPECT_EQ(missing.extract(pirate::archive_entry::with_index(0),
                             pirate::path{(root_ / "x").string()}),
             -1);
@@ -186,7 +186,7 @@ TEST_F(ArchiveTest, ExtractUnopenedAndCreateDirFails) {
   const auto zip = root_ / "nested.zip";
   pirate_test::write_bytes(
       zip, pirate_test::make_store_zip({{"nested/x.txt", "n", false}}));
-  pirate::zip_archive archive(zip.string());
+  pirate::archive archive(zip.string());
   ASSERT_TRUE(archive);
   std::vector<pirate::archive_entry> files;
   for (const auto& e : archive) {
@@ -203,7 +203,7 @@ TEST_F(ArchiveTest, ExtractSecondFileAndDirectory) {
       zip, pirate_test::make_store_zip({{"first.txt", "1", false},
                                         {"dir/", "", true},
                                         {"dir/second.txt", "2", false}}));
-  pirate::zip_archive archive(zip.string());
+  pirate::archive archive(zip.string());
   ASSERT_TRUE(archive);
   std::vector<pirate::archive_entry> all;
   for (const auto& e : archive) {
@@ -224,7 +224,7 @@ TEST_F(ArchiveTest, ExtractSecondFileAndDirectory) {
 TEST_F(ArchiveTest, CorruptArchive) {
   const auto zip = root_ / "bad.zip";
   pirate_test::write_bytes(zip, "not-an-archive");
-  pirate::zip_archive archive(zip.string());
+  pirate::archive archive(zip.string());
   EXPECT_FALSE(archive);
   int n = 0;
   for (const auto& e : archive) {
@@ -238,21 +238,21 @@ TEST_F(ArchiveTest, MoveAndBeginAfterDelete) {
   const auto zip = root_ / "mv.zip";
   pirate_test::write_bytes(zip,
                            pirate_test::make_store_zip({{"a.txt", "a", false}}));
-  pirate::zip_archive a(zip.string());
+  pirate::archive a(zip.string());
   ASSERT_TRUE(a);
-  pirate::zip_archive b{std::move(a)};
+  pirate::archive b{std::move(a)};
   EXPECT_FALSE(a);
   EXPECT_TRUE(b);
-  pirate::zip_archive c(zip.string());
+  pirate::archive c(zip.string());
   c = std::move(b);
   EXPECT_TRUE(c);
   c = std::move(c);
   EXPECT_TRUE(c);
   {
-    pirate::zip_archive closed{std::move(c)};
+    pirate::archive closed{std::move(c)};
   }
   fs::remove(zip);
-  pirate::zip_archive gone(zip.string());
+  pirate::archive gone(zip.string());
   EXPECT_FALSE(gone);
   auto it = gone.begin();
   EXPECT_TRUE(it.at_end());
@@ -266,7 +266,7 @@ TEST_F(ArchiveTest, TarAndTarGz) {
   pirate_test::write_bytes(tar, bytes);
   pirate_test::write_bytes(tgz, pirate_test::gzip_wrap(bytes));
 
-  pirate::tar_archive t(tar.string());
+  pirate::archive t(tar.string());
   ASSERT_TRUE(t);
   int n = 0;
   std::vector<pirate::archive_entry> files;
@@ -282,7 +282,7 @@ TEST_F(ArchiveTest, TarAndTarGz) {
   std::string body((std::istreambuf_iterator<char>(in)), {});
   EXPECT_EQ(body, "hello tar");
 
-  pirate::zip_archive g(tgz.string());
+  pirate::archive g(tgz.string());
   ASSERT_TRUE(g);
   int gn = 0;
   for (const auto& e : g) {

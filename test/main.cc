@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "pirate/zip_archive.h"
+#include "pirate/archive.h"
 
 int main(int argc, char** argv) {
   if (argc < 2) {
@@ -12,18 +12,18 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  const char* zip_file = argv[1];
+  const char* archive_file = argv[1];
   try {
-    pirate::zip_archive archive(zip_file);
-    if (!archive) {
-      fmt::println("open failed: {}", zip_file);
+    pirate::archive ar(archive_file);
+    if (!ar) {
+      fmt::println("open failed: {}", archive_file);
       return 1;
     }
 
-    fmt::println("zip_file:{}", zip_file);
+    fmt::println("archive:{}", archive_file);
 
     std::vector<pirate::archive_entry> selected;
-    for (const auto& entry : archive) {
+    for (const auto& entry : ar) {
       fmt::println("file:{} size:{} idx:{} dir:{}", entry.path().string(),
                    entry.file_size(), entry.index(), entry.is_directory());
       if (entry.is_regular_file()) {
@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
     }
 
     if (!selected.empty()) {
-      const int ret = archive.extract<pirate::sequential_extract_factory>(
+      const int ret = ar.extract<pirate::sequential_extract_factory>(
           selected, pirate::path{"out"});
       fmt::println("extract:{}", ret);
     }

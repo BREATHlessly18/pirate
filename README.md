@@ -1,4 +1,4 @@
 # pirate
 quick access to compressed files
 
-ZIP backend: [libarchive](https://github.com/libarchive/libarchive) (BSD), fetched by CMake.
+`pirate::archive` opens zip, tar, and tar.gz through one type; [libarchive](https://github.com/libarchive/libarchive) (BSD) probes the file. Fetched by CMake.

@@ -8,11 +8,11 @@
 
 namespace pirate {
 
-class zip_archive;
+class archive;
 
 struct archive_sentinel {};
 
-// Input iterator over a ZIP (like std::filesystem::directory_iterator).
+// Input iterator over archive members (like std::filesystem::directory_iterator).
 // Copies share the archive cursor: do not increment two copies independently.
 class archive_iterator {
  public:
@@ -23,7 +23,7 @@ class archive_iterator {
   using reference = const archive_entry&;
 
   archive_iterator() = default;
-  explicit archive_iterator(zip_archive* archive);
+  explicit archive_iterator(archive* owner);
 
   reference operator*() const noexcept { return current_; }
   pointer operator->() const noexcept { return &current_; }
@@ -36,7 +36,7 @@ class archive_iterator {
  private:
   void load_current();
 
-  zip_archive* archive_{nullptr};
+  archive* archive_{nullptr};
   archive_entry current_{};
   bool at_end_{true};
 };
