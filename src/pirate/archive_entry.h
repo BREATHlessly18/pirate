@@ -24,6 +24,16 @@ class archive_entry {
   bool is_regular_file() const noexcept { return !is_directory_; }
   bool has_index() const noexcept { return has_index_; }
 
+#ifdef PIRATE_UNIT_TEST
+  static archive_entry with_index(std::uint64_t i, pirate::path p = {}) {
+    archive_entry e;
+    e.index_ = i;
+    e.has_index_ = true;
+    e.path_ = std::move(p);
+    return e;
+  }
+#endif
+
  private:
   friend class archive_iterator;
   friend class zip_archive;
